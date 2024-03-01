@@ -27,7 +27,7 @@ tr = track / 2;                                 % m, rear half track
 GR = 11.86;                                     % Gear reduction
 Ix_motor = 0.000274;                            % kgm^2, motor mass moment of inertia
 Ix_wheel = (0.07829 + Ix_motor*GR*GR);          % kgm^2, wheel + motor mass moment of inertia, wheel mass = 4.6 kg
-b = 0.1;                                        % N.m.s/rad, motor damping factor
+b = 0.09;                                        % N.m.s/rad, motor damping factor
 gearboxEff = 1;                               % Gearbox efficiency
 motorOmegaLimit = 2094;                         % rad/s, motor mech. speed limit
 
@@ -72,13 +72,13 @@ F = load('COMBINED LATERAL FORCE COEFFS.mat').F;
 G = load('COMBINED ALIGNING TORQUE COEFFS.mat').G;
 C = load('COMBINED OVERTURNING MOMENT COEFFS.mat').C;
 
-tireFactor_X_Accel = 0.8;
-tireFactor_X_Brake = 0.4;
+tireFactor_X_Accel = 0.6;
+tireFactor_X_Brake = 0.6;
 tireFactor_Y = 0.6;
 
 %%
-load data0053.mat % AutoX
-% load data0058.mat % Endurance
+% load data0053.mat % AutoX
+load data0058.mat % Endurance
 
 motorTorqueFLTime = data.MOTOR_CONTROLLER.mc_fl.feedback_torque(:,1);
 motorTorqueFRTime = data.MOTOR_CONTROLLER.mc_fr.feedback_torque(:,1);
@@ -185,7 +185,8 @@ percentDiffRR(isnan(percentDiffRR)) = 0;
 
 
 %%
-close all
+% close all
+figure
 
 tiledlayout(4, 2)
 ax1 = nexttile;
