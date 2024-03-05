@@ -509,7 +509,7 @@ annotation('textbox', [0.2, 0.1, 0.1, 0.1] , 'String',  '1000N --> 700N --> 500N
 close all
 
 % TESTSL = linspace(-0.12, 0.12, 100)';
-TESTSA = linspace(0,    0,   100)';
+TESTSA = linspace(10,    10,   100)';
 % TESTFZ = -linspace(700, 0, 100)';
 
 TESTIA = linspace(0,     0,    100)';

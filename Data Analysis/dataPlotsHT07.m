@@ -15,8 +15,8 @@ subplot(2,1,2)
 hold on
 plot(data.MOTOR_CONTROLLER.mc_fl.feedback_torque(:,1),data.MOTOR_CONTROLLER.mc_fl.feedback_torque(:,2),'.');
 plot(data.MOTOR_CONTROLLER.mc_fr.feedback_torque(:,1),data.MOTOR_CONTROLLER.mc_fr.feedback_torque(:,2),'.');
-plot(data.MOTOR_CONTROLLER.mc_rl.feedback_torque(:,1),data.MOTOR_CONTROLLER.mc_rl.feedback_torque(:,2),'.');
-plot(data.MOTOR_CONTROLLER.mc_rr.feedback_torque(:,1),data.MOTOR_CONTROLLER.mc_rr.feedback_torque(:,2),'.');
+% plot(data.MOTOR_CONTROLLER.mc_rl.feedback_torque(:,1),data.MOTOR_CONTROLLER.mc_rl.feedback_torque(:,2),'.');
+% plot(data.MOTOR_CONTROLLER.mc_rr.feedback_torque(:,1),data.MOTOR_CONTROLLER.mc_rr.feedback_torque(:,2),'.');
 legend("Front Left","Front Right","Rear Left","Rear Right")
 xlabel('Time (s)')
 ylabel('Torque (Nm)')

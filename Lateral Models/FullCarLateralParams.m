@@ -3,10 +3,10 @@ close all;
 clc;
 
 %% Parameters
-dt = 0.001;                                     % s
+dt = 0.001;                                     % s, change simulink solver step size too
 
 m = 250;                                        % kg, total vehicle mass
-Iz_vehicle = 100;                               % kgm^2
+Iz_vehicle = 125;                               % kgm^2
 g = 9.81;                                       % m/s^2
 rho = 1.293;                                    % kg/m^3, density of air
 
@@ -27,9 +27,11 @@ tr = track / 2;                                 % m, rear half track
 GR = 11.86;                                     % Gear reduction
 Ix_motor = 0.000274;                            % kgm^2, motor mass moment of inertia
 Ix_wheel = (0.07829 + Ix_motor*GR*GR);          % kgm^2, wheel + motor mass moment of inertia, wheel mass = 4.6 kg
-b = 0.09;                                        % N.m.s/rad, motor damping factor
+b = 0.1;                                        % N.m.s/rad, motor damping factor
 gearboxEff = 1;                               % Gearbox efficiency
 motorOmegaLimit = 2094;                         % rad/s, motor mech. speed limit
+
+% motorOmegaLimit = 1186;
 
 R_wheel = 0.2;                                  % m, tire radius
 
@@ -76,9 +78,20 @@ tireFactor_X_Accel = 0.6;
 tireFactor_X_Brake = 0.6;
 tireFactor_Y = 0.6;
 
+warning off
+steerParamData = readtable('HT08LeftHandCornerSteerTorqueParams.xlsx');
+warning on
+
+driverSteerKin = steerParamData.Motion_Steering__deg_;
+wheelSteerKin = steerParamData.SteerAngle_Left__Front__deg_;
+
+% risingSlewRate = 1000;
+% fallingSlewRate = -1000;
+
 %%
-% load data0053.mat % AutoX
-load data0058.mat % Endurance
+load data0053.mat % AutoX 26s - 70s
+% load data0058.mat % Endurance
+% load data0234.mat % Left Hand Continuous Corner 78.631s - 110s
 
 motorTorqueFLTime = data.MOTOR_CONTROLLER.mc_fl.feedback_torque(:,1);
 motorTorqueFRTime = data.MOTOR_CONTROLLER.mc_fr.feedback_torque(:,1);
@@ -100,10 +113,18 @@ wheelSpeedDataFRTime = data.MOTOR_CONTROLLER.mc_fr.speed(:,1);
 wheelSpeedDataRLTime = data.MOTOR_CONTROLLER.mc_rl.speed(:,1);
 wheelSpeedDataRRTime = data.MOTOR_CONTROLLER.mc_rr.speed(:,1);
 
+steeringTime = data.MCU.analog.steering_2(:,1);
+steeringData = -0.111*data.MCU.analog.steering_2(:,2) + 260;
+
+steeringData(abs(steeringData) < 1) = 0;
+
+
 [uniqueTimeFL, indFL] = unique(motorTorqueFLTime, 'stable');
 [uniqueTimeFR, indFR] = unique(motorTorqueFRTime, 'stable');
 [uniqueTimeRL, indRL] = unique(motorTorqueRLTime, 'stable');
 [uniqueTimeRR, indRR] = unique(motorTorqueRRTime, 'stable');
+
+[uniqueTimeSteer, indSteer] = unique(steeringTime, 'stable');
 
 timelsim = uniqueTimeFL(1):dt:uniqueTimeFL(end);
 
@@ -112,15 +133,20 @@ motorTorqueFRInterp = interp1(uniqueTimeFR, motorTorqueFR(indFR), timelsim)';
 motorTorqueRLInterp = interp1(uniqueTimeRL, motorTorqueRL(indRL), timelsim)';
 motorTorqueRRInterp = interp1(uniqueTimeRR, motorTorqueRR(indRR), timelsim)';
 
+steeringDataInterp = interp1(uniqueTimeSteer, steeringData(indSteer), timelsim)';
+
 motorTorqueFLInterp(isnan(motorTorqueFLInterp)) = 0;
 motorTorqueFRInterp(isnan(motorTorqueFRInterp)) = 0;
 motorTorqueRLInterp(isnan(motorTorqueRLInterp)) = 0;
 motorTorqueRRInterp(isnan(motorTorqueRRInterp)) = 0;
 
+steeringDataInterp(isnan(steeringDataInterp)) = 0;
+
 motorTorqueFLInterp(abs(motorTorqueFLInterp) < 1) = 0;
 motorTorqueFRInterp(abs(motorTorqueFRInterp) < 1) = 0;
 motorTorqueRLInterp(abs(motorTorqueRLInterp) < 1) = 0;
 motorTorqueRRInterp(abs(motorTorqueRRInterp) < 1) = 0;
+
 
 motorTorqueFLInterp(abs(motorTorqueFLInterp) > 22) = 22;
 motorTorqueFRInterp(abs(motorTorqueFRInterp) > 22) = 22;
@@ -137,17 +163,52 @@ wheelSpeedDataFRInterp = interp1(uniqueTimeFR, wheelSpeedDataFR(indFR), timelsim
 wheelSpeedDataRLInterp = interp1(uniqueTimeRL, wheelSpeedDataRL(indRL), timelsim)';
 wheelSpeedDataRRInterp = interp1(uniqueTimeRR, wheelSpeedDataRR(indRR), timelsim)';
 
+% [motorTorqueFRInterp, motorTorqueFLInterp] = alignsignals(motorTorqueFRInterp, motorTorqueFLInterp);
+% [motorTorqueRLInterp, motorTorqueFLInterp] = alignsignals(motorTorqueRLInterp, motorTorqueFLInterp);
+% [motorTorqueRRInterp, motorTorqueFLInterp] = alignsignals(motorTorqueRRInterp, motorTorqueFLInterp);
+motorTorqueFLInitInd = find((motorTorqueFLInterp > 0), 1, 'first');
+motorTorqueFRInitInd = find((motorTorqueFRInterp > 0), 1, 'first');
+motorTorqueRLInitInd = find((motorTorqueRLInterp > 0), 1, 'first');
+motorTorqueRRInitInd = find((motorTorqueRRInterp > 0), 1, 'first');
+
+latestInitInd = max([motorTorqueFLInitInd motorTorqueFRInitInd motorTorqueRLInitInd motorTorqueRRInitInd]);
+motorTorqueFLInterp(1:latestInitInd) = 0;
+motorTorqueFRInterp(1:latestInitInd) = 0;
+motorTorqueRLInterp(1:latestInitInd) = 0;
+motorTorqueRRInterp(1:latestInitInd) = 0;
+
+% For HT07 data, negative steer = turning right, change to SAE standard
+steeringDataMap = [-130 130];
+wheelSteerRange = [23 -23];
+steeringDataInput = interp1(steeringDataMap, wheelSteerRange, steeringDataInterp);
+
+
+% wheelSteerDataInterpMagnitude = interp1(abs(driverSteerKin), abs(wheelSteerKin), abs(steeringDataInterp));
+% wheelSteerDataInterpDir = sign(steeringDataInterp);
+
+% wheelSteerDataInterp = wheelSteerDataInterpMagnitude .* wheelSteerDataInterpDir;
+
+
+% wheelSteerDataInterp = wheelSteerDataInterp .* -1;
+
+% wheelSteerDataInterp = smoothdata(wheelSteerDataInterp, 'movmedian');
+
 
 timelsim = timelsim';
 maxval = round(timelsim(end));
 
 figure
 hold on
-plot(motorTorqueFLInterp)
-plot(motorTorqueFRInterp)
-plot(motorTorqueRLInterp)
-plot(motorTorqueRRInterp)
+plot(timelsim, motorTorqueFLInterp)
+plot(timelsim, motorTorqueFRInterp)
+plot(timelsim, motorTorqueRLInterp)
+plot(timelsim, motorTorqueRRInterp)
 
+figure
+hold on
+plot(timelsim, steeringDataInput)
+% plot(timelsim, -steeringDataInterp)
+legend('Driver Steer (Deg)')
 %%
 [commonTime, iA, iB] = intersect(out.wheelLinearSpeed.Time(:, 1), timelsim);
 
@@ -270,3 +331,19 @@ annotation('textbox',...
 title('RR % Diff')
 
 linkaxes([ax1 ax2 ax3 ax4 ax5 ax6 ax7 ax8], 'x')
+
+figure
+hold on
+grid on
+plot(out.bFrame.Speed)
+
+%%
+figure
+hold on
+axis square
+grid on
+plot(out.positionVec.Y_POS_INERTIAL.Data, out.positionVec.X_POS_INERTIAL.Data)
+plot(out.positionVec.Y_POS_INERTIAL.Data(1), out.positionVec.X_POS_INERTIAL.Data(1), '^', 'LineWidth', 3)
+xlabel('Y (m)')
+ylabel('X (m)')
+legend('Inertial Position', 'Starting Point')
