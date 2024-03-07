@@ -27,7 +27,7 @@ tr = track / 2;                                 % m, rear half track
 GR = 11.86;                                     % Gear reduction
 Ix_motor = 0.000274;                            % kgm^2, motor mass moment of inertia
 Ix_wheel = (0.07829 + Ix_motor*GR*GR);          % kgm^2, wheel + motor mass moment of inertia, wheel mass = 4.6 kg
-b = 0.1;                                        % N.m.s/rad, motor damping factor
+b = 0.07;                                        % N.m.s/rad, motor damping factor
 gearboxEff = 1;                               % Gearbox efficiency
 motorOmegaLimit = 2094;                         % rad/s, motor mech. speed limit
 
@@ -89,8 +89,8 @@ wheelSteerKin = steerParamData.SteerAngle_Left__Front__deg_;
 % fallingSlewRate = -1000;
 
 %%
-load data0053.mat % AutoX 26s - 70s
-% load data0058.mat % Endurance
+% load data0053.mat % AutoX 26s - 70s
+load data0058.mat % Endurance
 % load data0234.mat % Left Hand Continuous Corner 78.631s - 110s
 
 motorTorqueFLTime = data.MOTOR_CONTROLLER.mc_fl.feedback_torque(:,1);
@@ -195,20 +195,20 @@ steeringDataInput = interp1(steeringDataMap, wheelSteerRange, steeringDataInterp
 
 
 timelsim = timelsim';
-maxval = round(timelsim(end));
 
-figure
-hold on
-plot(timelsim, motorTorqueFLInterp)
-plot(timelsim, motorTorqueFRInterp)
-plot(timelsim, motorTorqueRLInterp)
-plot(timelsim, motorTorqueRRInterp)
-
-figure
-hold on
-plot(timelsim, steeringDataInput)
-% plot(timelsim, -steeringDataInterp)
-legend('Driver Steer (Deg)')
+% maxval = round(timelsim(end));
+% 
+% figure
+% hold on
+% plot(timelsim, motorTorqueFLInterp)
+% plot(timelsim, motorTorqueFRInterp)
+% plot(timelsim, motorTorqueRLInterp)
+% plot(timelsim, motorTorqueRRInterp)
+% 
+% figure
+% hold on
+% plot(timelsim, steeringDataInput)
+% legend('Driver Steer (Deg)')
 %%
 [commonTime, iA, iB] = intersect(out.wheelLinearSpeed.Time(:, 1), timelsim);
 
@@ -245,7 +245,7 @@ percentDiffRL(isnan(percentDiffRL)) = 0;
 percentDiffRR(isnan(percentDiffRR)) = 0;
 
 
-%%
+
 % close all
 figure
 
@@ -337,10 +337,18 @@ hold on
 grid on
 plot(out.bFrame.Speed)
 
+% figure
+% hold on
+% grid on 
+% plot(timelsim, motorTorqueFLInterp)
+% plot(commonTime, wheelSpeedDataFLInterp, '--') 
+% plot(commonTime, simWheelSpeedFL)
+% legend('Input Torque [N-m]', 'Test Data Speed [m/s]', 'Sim Speed [m/s]')
+% title('FL Wheel Linear Speed')
 %%
 figure
 hold on
-axis square
+axis equal
 grid on
 plot(out.positionVec.Y_POS_INERTIAL.Data, out.positionVec.X_POS_INERTIAL.Data)
 plot(out.positionVec.Y_POS_INERTIAL.Data(1), out.positionVec.X_POS_INERTIAL.Data(1), '^', 'LineWidth', 3)
