@@ -88,3 +88,124 @@ wheelSteerKin = steerParamData.SteerAngle_Left__Front__deg_;
 % risingSlewRate = 1000;
 % fallingSlewRate = -1000;
 
+%%
+load data0053.mat % AutoX 26s - 70s
+% load data0058.mat % Endurance
+% load data0234.mat % Left Hand Continuous Corner 78.631s - 110s
+
+motorTorqueFLTime = data.MOTOR_CONTROLLER.mc_fl.feedback_torque(:,1);
+motorTorqueFRTime = data.MOTOR_CONTROLLER.mc_fr.feedback_torque(:,1);
+motorTorqueRLTime = data.MOTOR_CONTROLLER.mc_rl.feedback_torque(:,1);
+motorTorqueRRTime = data.MOTOR_CONTROLLER.mc_rr.feedback_torque(:,1);
+
+motorTorqueFL = data.MOTOR_CONTROLLER.mc_fl.feedback_torque(:,2);
+motorTorqueFR = data.MOTOR_CONTROLLER.mc_fr.feedback_torque(:,2);
+motorTorqueRL = data.MOTOR_CONTROLLER.mc_rl.feedback_torque(:,2);
+motorTorqueRR = data.MOTOR_CONTROLLER.mc_rr.feedback_torque(:,2);
+
+wheelSpeedDataFL = data.MOTOR_CONTROLLER.mc_fl.speed(:,2).*0.2.*0.1047198./11.86;
+wheelSpeedDataFR = data.MOTOR_CONTROLLER.mc_fr.speed(:,2).*0.2.*0.1047198./11.86;
+wheelSpeedDataRL = data.MOTOR_CONTROLLER.mc_rl.speed(:,2).*0.2.*0.1047198./11.86;
+wheelSpeedDataRR = data.MOTOR_CONTROLLER.mc_rr.speed(:,2).*0.2.*0.1047198./11.86;
+
+wheelSpeedDataFLTime = data.MOTOR_CONTROLLER.mc_fl.speed(:,1);
+wheelSpeedDataFRTime = data.MOTOR_CONTROLLER.mc_fr.speed(:,1);
+wheelSpeedDataRLTime = data.MOTOR_CONTROLLER.mc_rl.speed(:,1);
+wheelSpeedDataRRTime = data.MOTOR_CONTROLLER.mc_rr.speed(:,1);
+
+steeringTime = data.MCU.analog.steering_2(:,1);
+steeringData = -0.111*data.MCU.analog.steering_2(:,2) + 260;
+
+steeringData(abs(steeringData) < 1) = 0;
+
+
+[uniqueTimeFL, indFL] = unique(motorTorqueFLTime, 'stable');
+[uniqueTimeFR, indFR] = unique(motorTorqueFRTime, 'stable');
+[uniqueTimeRL, indRL] = unique(motorTorqueRLTime, 'stable');
+[uniqueTimeRR, indRR] = unique(motorTorqueRRTime, 'stable');
+
+[uniqueTimeSteer, indSteer] = unique(steeringTime, 'stable');
+
+timelsim = uniqueTimeFL(1):dt:uniqueTimeFL(end);
+
+motorTorqueFLInterp = interp1(uniqueTimeFL, motorTorqueFL(indFL), timelsim)';
+motorTorqueFRInterp = interp1(uniqueTimeFR, motorTorqueFR(indFR), timelsim)';
+motorTorqueRLInterp = interp1(uniqueTimeRL, motorTorqueRL(indRL), timelsim)';
+motorTorqueRRInterp = interp1(uniqueTimeRR, motorTorqueRR(indRR), timelsim)';
+
+steeringDataInterp = interp1(uniqueTimeSteer, steeringData(indSteer), timelsim)';
+
+motorTorqueFLInterp(isnan(motorTorqueFLInterp)) = 0;
+motorTorqueFRInterp(isnan(motorTorqueFRInterp)) = 0;
+motorTorqueRLInterp(isnan(motorTorqueRLInterp)) = 0;
+motorTorqueRRInterp(isnan(motorTorqueRRInterp)) = 0;
+
+steeringDataInterp(isnan(steeringDataInterp)) = 0;
+
+motorTorqueFLInterp(abs(motorTorqueFLInterp) < 1) = 0;
+motorTorqueFRInterp(abs(motorTorqueFRInterp) < 1) = 0;
+motorTorqueRLInterp(abs(motorTorqueRLInterp) < 1) = 0;
+motorTorqueRRInterp(abs(motorTorqueRRInterp) < 1) = 0;
+
+
+motorTorqueFLInterp(abs(motorTorqueFLInterp) > 22) = 22;
+motorTorqueFRInterp(abs(motorTorqueFRInterp) > 22) = 22;
+motorTorqueRLInterp(abs(motorTorqueRLInterp) > 22) = 22;
+motorTorqueRRInterp(abs(motorTorqueRRInterp) > 22) = 22;
+
+[uniqueTimeFL, indFL] = unique(wheelSpeedDataFLTime, 'stable');
+[uniqueTimeFR, indFR] = unique(wheelSpeedDataFRTime, 'stable');
+[uniqueTimeRL, indRL] = unique(wheelSpeedDataRLTime, 'stable');
+[uniqueTimeRR, indRR] = unique(wheelSpeedDataRRTime, 'stable');
+
+wheelSpeedDataFLInterp = interp1(uniqueTimeFL, wheelSpeedDataFL(indFL), timelsim)';
+wheelSpeedDataFRInterp = interp1(uniqueTimeFR, wheelSpeedDataFR(indFR), timelsim)';
+wheelSpeedDataRLInterp = interp1(uniqueTimeRL, wheelSpeedDataRL(indRL), timelsim)';
+wheelSpeedDataRRInterp = interp1(uniqueTimeRR, wheelSpeedDataRR(indRR), timelsim)';
+
+% [motorTorqueFRInterp, motorTorqueFLInterp] = alignsignals(motorTorqueFRInterp, motorTorqueFLInterp);
+% [motorTorqueRLInterp, motorTorqueFLInterp] = alignsignals(motorTorqueRLInterp, motorTorqueFLInterp);
+% [motorTorqueRRInterp, motorTorqueFLInterp] = alignsignals(motorTorqueRRInterp, motorTorqueFLInterp);
+motorTorqueFLInitInd = find((motorTorqueFLInterp > 0), 1, 'first');
+motorTorqueFRInitInd = find((motorTorqueFRInterp > 0), 1, 'first');
+motorTorqueRLInitInd = find((motorTorqueRLInterp > 0), 1, 'first');
+motorTorqueRRInitInd = find((motorTorqueRRInterp > 0), 1, 'first');
+
+latestInitInd = max([motorTorqueFLInitInd motorTorqueFRInitInd motorTorqueRLInitInd motorTorqueRRInitInd]);
+motorTorqueFLInterp(1:latestInitInd) = 0;
+motorTorqueFRInterp(1:latestInitInd) = 0;
+motorTorqueRLInterp(1:latestInitInd) = 0;
+motorTorqueRRInterp(1:latestInitInd) = 0;
+
+% For HT07 data, negative steer = turning right, change to SAE standard
+steeringDataMap = [-130 130];
+wheelSteerRange = [23 -23];
+steeringDataInput = interp1(steeringDataMap, wheelSteerRange, steeringDataInterp);
+
+
+% wheelSteerDataInterpMagnitude = interp1(abs(driverSteerKin), abs(wheelSteerKin), abs(steeringDataInterp));
+% wheelSteerDataInterpDir = sign(steeringDataInterp);
+
+% wheelSteerDataInterp = wheelSteerDataInterpMagnitude .* wheelSteerDataInterpDir;
+
+
+% wheelSteerDataInterp = wheelSteerDataInterp .* -1;
+
+% wheelSteerDataInterp = smoothdata(wheelSteerDataInterp, 'movmedian');
+
+
+timelsim = timelsim';
+
+% maxval = round(timelsim(end));
+% 
+figure
+hold on
+plot(timelsim, motorTorqueFLInterp)
+plot(timelsim, motorTorqueFRInterp)
+plot(timelsim, motorTorqueRLInterp)
+plot(timelsim, motorTorqueRRInterp)
+
+figure
+hold on
+plot(timelsim, steeringDataInput)
+legend('Driver Steer (Deg)')
