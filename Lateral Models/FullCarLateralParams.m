@@ -3,7 +3,7 @@ close all;
 clc;
 
 %% Parameters
-dt = 0.001;                                     % s, change simulink solver step size too
+dt = 0.0001;                                     % s, change simulink solver step size too
 
 m = 250;                                        % kg, total vehicle mass
 Iz_vehicle = 125;                               % kgm^2
@@ -89,9 +89,10 @@ wheelSteerKin = steerParamData.SteerAngle_Left__Front__deg_;
 % fallingSlewRate = -1000;
 
 %%
-load data0053.mat % AutoX 26s - 70s
-% load data0058.mat % Endurance
-% load data0234.mat % Left Hand Continuous Corner 78.631s - 110s
+% load data0053.mat % Michelin AutoX 26s - 70s
+% load data0058.mat % Michelin Endurance
+load data0028.mat % Michelin Skidpad 
+% load data0234.mat % SCC Left Hand Continuous Corner 0 - 30s
 
 motorTorqueFLTime = data.MOTOR_CONTROLLER.mc_fl.feedback_torque(:,1);
 motorTorqueFRTime = data.MOTOR_CONTROLLER.mc_fr.feedback_torque(:,1);
@@ -115,6 +116,15 @@ wheelSpeedDataRRTime = data.MOTOR_CONTROLLER.mc_rr.speed(:,1);
 
 steeringTime = data.MCU.analog.steering_2(:,1);
 steeringData = -0.111*data.MCU.analog.steering_2(:,2) + 260;
+
+figure
+hold on
+plot(steeringTime, steeringData)
+
+steeringData = lowpass(steeringData, 4, 1/dt);
+plot(steeringTime, steeringData)
+legend('Before', 'After')
+
 
 steeringData(abs(steeringData) < 1) = 0;
 
@@ -172,17 +182,23 @@ motorTorqueRLInitInd = find((motorTorqueRLInterp > 0), 1, 'first');
 motorTorqueRRInitInd = find((motorTorqueRRInterp > 0), 1, 'first');
 
 latestInitInd = max([motorTorqueFLInitInd motorTorqueFRInitInd motorTorqueRLInitInd motorTorqueRRInitInd]);
-motorTorqueFLInterp(1:latestInitInd) = 0;
-motorTorqueFRInterp(1:latestInitInd) = 0;
-motorTorqueRLInterp(1:latestInitInd) = 0;
-motorTorqueRRInterp(1:latestInitInd) = 0;
+motorTorqueFLInterp(1:latestInitInd) = [];
+motorTorqueFRInterp(1:latestInitInd) = [];
+motorTorqueRLInterp(1:latestInitInd) = [];
+motorTorqueRRInterp(1:latestInitInd) = [];
+
+wheelSpeedDataFLInterp(1:latestInitInd) = [];
+wheelSpeedDataFRInterp(1:latestInitInd) = [];
+wheelSpeedDataRLInterp(1:latestInitInd) = [];
+wheelSpeedDataRRInterp(1:latestInitInd) = [];
 
 % For HT07 data, negative steer = turning right, change to SAE standard
 steeringDataMap = [-130 130];
 wheelSteerRange = [23 -23];
-steeringDataInput = interp1(steeringDataMap, wheelSteerRange, steeringDataInterp);
+wheelSteerDataInput = interp1(steeringDataMap, wheelSteerRange, steeringDataInterp);
 
-
+wheelSteerDataInput(1:latestInitInd) = [];
+steeringDataInterp(1:latestInitInd) = [];
 % wheelSteerDataInterpMagnitude = interp1(abs(driverSteerKin), abs(wheelSteerKin), abs(steeringDataInterp));
 % wheelSteerDataInterpDir = sign(steeringDataInterp);
 
@@ -194,7 +210,12 @@ steeringDataInput = interp1(steeringDataMap, wheelSteerRange, steeringDataInterp
 % wheelSteerDataInterp = smoothdata(wheelSteerDataInterp, 'movmedian');
 
 
+
+
+timelsim(1:latestInitInd) = [];
+timelsim = 0:dt:dt * length(timelsim) - dt;
 timelsim = timelsim';
+
 
 % maxval = round(timelsim(end));
 % 
@@ -205,7 +226,13 @@ plot(timelsim, motorTorqueFRInterp)
 plot(timelsim, motorTorqueRLInterp)
 plot(timelsim, motorTorqueRRInterp)
 
-figure
+tiledlayout(2, 1)
+nexttile
 hold on
-plot(timelsim, steeringDataInput)
+plot(timelsim, -steeringDataInterp)
 legend('Driver Steer (Deg)')
+
+nexttile
+hold on
+plot(timelsim, wheelSteerDataInput)
+legend('Wheel Steer (Deg)')

@@ -122,10 +122,10 @@ title('RR % Diff')
 
 linkaxes([ax1 ax2 ax3 ax4 ax5 ax6 ax7 ax8], 'x')
 
-figure
-hold on
-grid on
-plot(out.bFrame.Speed)
+% figure
+% hold on
+% grid on
+% plot(out.bFrame.Speed)
 
 % figure
 % hold on
@@ -143,10 +143,10 @@ plot(out.bFrame.Yaw_Rate)
 plot(out.bFrame.Vy_B)
 legend('Yaw Rate [rad/s]', 'Vy_B [m/s]')
 
-figure
-hold on
-grid on
-plot(out.bFrame.Yaw_Accel)
+% figure
+% hold on
+% grid on
+% plot(out.bFrame.Yaw_Accel)
 %%
 figure
 hold on
