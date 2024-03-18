@@ -2,6 +2,9 @@ close all;
 clear;
 clc;
 
+% Modified from OpenLAP
+% https://github.com/mc12027/OpenLAP-Lap-Time-Simulator
+
 %% LAP EVENT SOLVER
 
 veh = VehicleCharac(false);
@@ -274,6 +277,7 @@ ylabel('Ang. Vel [rad/s]')
 plot(tr.posAlongTrack, yaw_rate)
 title('Delta and Yaw Rate')
 legend('Wheel Steer', 'Yaw Rate')
+xlabel('Distance Along Track [m]')
 
 subplot(3, 2, 6)
 hold on
