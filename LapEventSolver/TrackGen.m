@@ -141,7 +141,7 @@ function [track] = TrackGen(filename, kappa, dispGraph)
     Y = zeros(n, 1);
     
     % Segment angle
-    angle_seg = lambda * rad2deg(dx.*-r);
+    angle_seg = lambda * rad2deg(dx.*r);
     
     % Heading angle 
     angle_head = cumsum(angle_seg);
@@ -182,42 +182,116 @@ function [track] = TrackGen(filename, kappa, dispGraph)
         X = X+DX ;
         Y = Y+DY ;
     end
-    
+   
+
+    %% Tangential Angle Calculation
+
+    tangentialAngleRad = zeros(size(X));
+
+    for i = 1:length(X) - 1
+        
+        dXpos = X(i + 1) - X(i);
+        dYpos = Y(i + 1) - Y(i);
+        prevAngle = tangentialAngleRad(i);
+
+        % atan2 only outputs [-pi, pi] or [-180, 180], to expand to [-2pi,
+        % 2pi], mod is used.
+
+        % Mod only outputs positive value, therefore angles such as -45
+        % degrees becomes 315 degrees. To correct this, mod(-45, 360) needs
+        % to be subtracted by 360 degrees (2pi). This corresponds to
+        % whenever atan2(dYpos, dXpos) < 0, which is the same condition
+        % for when mod(atan2(dYpos, dXpos)) > pi. 
+
+        % However, this is also a problem for whenver the vehicle should 
+        % finish a closed track because the final heading angle should be
+        % 360 degrees. By subtracting 2 pi from whenever atan2(dYpos,
+        % dXpos) < 0, any angle above magnitude of 180 degrees is
+        % unachievable. For example, instead of going from 180 --> 360, the
+        % curve would go from 180 --> -180 --> 0. The loop below checks the
+        % "derivative" of the tangential angle to determine whether 2pi
+        % should be subtracted. Essentially constraining the curve to be
+        % continuous.
+
+        potentialAngle = mod(atan2(dYpos, dXpos), 2*pi);
+
+        % Any angular change above 1 rad threshold should subtract 2 pi
+        if (abs(potentialAngle - prevAngle) > 1)
+            potentialAngle = potentialAngle - 2*pi;
+            tangentialAngleRad(i+1) = potentialAngle;
+        else
+            tangentialAngleRad(i+1) = potentialAngle;
+        end
+
+    end
+
+    for i = 1:length(tangentialAngleRad) - 1
+
+        dTangentialAng = tangentialAngleRad(i + 1) - tangentialAngleRad(i);
+
+        if (dTangentialAng) < -1
+            tangentialAngleRad(i + 1) = tangentialAngleRad(i);
+        end
+
+        if (dTangentialAng) > 1
+            tangentialAngleRad(i + 1) = tangentialAngleRad(i);
+        end
+
+    end
+
+%% Graphing
+
     if(dispGraph)
     
         warning off 
 
         figure
-        tiledlayout(1, 2)
+        tiledlayout(3, 1)
         nexttile
         hold on
         box on
         grid on
         axis equal
         daspect([1 1 1])
-        plot(X, Y)
-        plot(X(1), Y(1), 'o')
-        line([X(1) X(15)], [Y(1) Y(15)], 'Color','red','LineWidth',1)
+        plot(Y, X)
+        plot(Y(1), X(1), 'o')
+        line([Y(1) Y(15)], [X(1) X(15)], 'Color','red','LineWidth',1)
         
         for i = 1:length(w)
-            plot(X(round(apexLocation(i)+w(i)/2)), Y(round(apexLocation(i)+w(i)/2)), 'm*')
+            plot(Y(round(apexLocation(i)+w(i)/2)), X(round(apexLocation(i)+w(i)/2)), 'm*')
         end
         legend('Track', 'Starting Point', 'Travel Direction', 'Apex Approx. Center')
         
+        xlabel('Y [m]')
+        ylabel('X [m]')
         title('Track Map')
         
         nexttile
         hold on
         box on
         grid on
-        plot(x, r)
+        plot(cumsum(dx), r)
         title('Curvature')
-        xlabel('Position [m]')
+        xlabel('Position Along Track [m] [m]')
         ylabel('Curvature [m^-^1]')
     
+        nexttile
+        hold on
+        box on
+        grid on
+        plot(cumsum(dx), rad2deg(tangentialAngleRad))
+        
+        title('Tangential Angle')
+        xlabel('Position Along Track [m]')
+        ylabel('Tangential Angle [Deg]')
+
         warning on
     end
+ 
     
+
+%% Output Track Data
+
     track.X = X;
     track.Y = Y;
     track.dx = dx;
@@ -226,4 +300,6 @@ function [track] = TrackGen(filename, kappa, dispGraph)
     track.n = n;
     track.posAlongTrack = cumsum(dx);
     track.config = config_str;
+    track.tangentialAngDeg = rad2deg(tangentialAngleRad);
 
+end

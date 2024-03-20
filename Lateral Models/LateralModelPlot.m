@@ -169,6 +169,7 @@ bodyVelL = cgVelL;
 CGheadingAngleRad = atan2(out.iFrame.Y_VEL_INERTIAL.Data, out.iFrame.X_VEL_INERTIAL.Data);
 
 CGheadingAngleRad(isnan(CGheadingAngleRad)) = 0;
+CGheadingAngleRad(CGheadingAngleRad < 0) = CGheadingAngleRad(CGheadingAngleRad < 0) + 2*pi;
 
 cgVelHeadX = cos(CGheadingAngleRad) .* cgVelL;
 cgVelHeadY = sin(CGheadingAngleRad) .* cgVelL;
@@ -182,16 +183,24 @@ figure
 hold on
 box on
 grid on
+plot(out.tout, rad2deg(CGheadingAngleRad), 'r')
+plot(out.tout, rad2deg(bodyHeadingAngleRad), 'g')
+legend('CG Vel. Dir.', 'Body Heading Dir.')
+
+figure
+hold on
+box on
+grid on
 axis equal
 cgVelLine = line([0 cgVelHeadY(1)], [0 cgVelHeadX(1)],'color' ,'r');
 bodyHeadingLine = line([0 bodyHeadingY(1)], [0 bodyHeadingX(1)],'color' ,'g');
 
 an = annotation('textbox', [.2, .8, .1, .1], 'String', 't = ');
 
-xlim([-1 1])
-ylim([-1 1])
+xlim([-.7 .7])
+ylim([-.7 .7])
 
-for i = 1:5:length(cgVelHeadX)
+for i = 1:20:length(cgVelHeadX)
 
     
     set(cgVelLine, 'YData', [0 cgVelHeadX(i)])
@@ -200,7 +209,7 @@ for i = 1:5:length(cgVelHeadX)
     set(bodyHeadingLine, 'YData', [0 bodyHeadingX(i)])
     set(bodyHeadingLine, 'XData', [0 bodyHeadingY(i)])
 
-    legend('CG Vel Dir', 'Body Heading Dir')
+    legend('CG Vel. Dir.', 'Body Heading Dir.')
 
     timeStr = sprintf('t = %.2f s', out.tout(i));
     set(an, 'String', timeStr)

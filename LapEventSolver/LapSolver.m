@@ -8,7 +8,7 @@ clc;
 %% LAP EVENT SOLVER
 
 veh = VehicleCharac(false);
-tr = TrackGen('Straight 75m.xlsx', 10, true);
+tr = TrackGen('UTrack.xlsx', 1, true);
 
 v_initial = 0;
 
@@ -247,6 +247,7 @@ trackReference.curvature = tr.r;
 trackReference.X = tr.X;
 trackReference.Y = tr.Y;
 
+figure
 subplot(4, 2, [1 3 5 7])
 hold on
 box on
@@ -263,16 +264,16 @@ legend('GGV Surface', 'Lap Accelerations')
 
 subplot(4, 2, 2)
 hold on
-plot(tr.X(1), tr.Y(1), 'r^', 'MarkerSize', 8)
-scatter(tr.X, tr.Y, 15, V)
+plot(tr.Y(1), tr.X(1), 'r^', 'MarkerSize', 8)
+scatter(tr.Y, tr.X, 15, V)
 alpha(1)
 cb = colorbar;
 cb.Label.String = 'Speed [m/s]';
+daspect([1 1 1])
 grid on
 axis equal
-axis padded
-xlabel('X [m]')
-ylabel('Y [m]')
+xlabel('Y [m]')
+ylabel('X [m]')
 title('Track Map')
 legend('Starting Location')
 
