@@ -46,10 +46,7 @@ function veh = VehicleCharac(dispGraph)
     MUX = @(FZ) (PDX1 + PDX2 .* ((FZ - FZO) ./ FZO));
     SVX = @(FZ) FZ .* (PVX1 + PVX2 .* ((FZ - FZO) ./ FZO));
     FX = @(FZ) (MUX(FZ) .* FZ + SVX(FZ)) .* tireFactor_X;
-    
-    FX_max = FX(fz_per_tire_static) .* 4;
-    FY_max = FY(fz_per_tire_static) .* 4;
-    
+        
     % Cornering stiffness
     SA = linspace(-2, 2)';
     
@@ -74,7 +71,7 @@ function veh = VehicleCharac(dispGraph)
     powerLimit = 80; % kW
     powerLimit = powerLimit * 1000; % Nm/s
     
-    angVelVec = linspace(0, motorOmegaLimit);
+    angVelVec = linspace(0, motorOmegaLimit, 50);
     totalPowerLimitedMotorTorque = powerLimit./angVelVec;
     vehicle_speed = angVelVec./GR.*R_tire;
     

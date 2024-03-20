@@ -1,6 +1,6 @@
 function [track] = TrackGen(filename, kappa, dispGraph)
     
-    mesh_size = 1; % m
+    mesh_size = 0.1; % m
     
     % kappa = long corner adjuster
 
@@ -57,8 +57,8 @@ function [track] = TrackGen(filename, kappa, dispGraph)
             % Calculate the length of the injected segment
             l_inj = min([ll(j) / 3, deg2rad(kappa) * R(i)]);
     
-            % Split up the current long angle segment into l_inj + (l-2*l_inj)
-            % + l_inj (first, middle, and last piece)
+            % Split up the current long angle segment into 
+            % l_inj + (l-2*l_inj) + l_inj (first, middle, and last piece)
     
             ll = [  ll(1:j-1); % Keep everything before the current segment
                     l_inj; % Add first piece

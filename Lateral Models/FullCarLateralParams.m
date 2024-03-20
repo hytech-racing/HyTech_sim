@@ -1,9 +1,9 @@
-clear;
-close all;
-clc;
+% clear;
+% close all;
+% clc;
 
 %% Parameters
-dt = 0.0001;                                     % s, change simulink solver step size too
+dt = 0.0005;                                     % s, change simulink solver step size too
 
 m = 250;                                        % kg, total vehicle mass
 Iz_vehicle = 125;                               % kgm^2
@@ -24,11 +24,12 @@ track = 1.2;                                    % m, total track width
 tf = track / 2;                                 % m, front half track
 tr = track / 2;                                 % m, rear half track
 
+Ix_wheel_factor = 1;
 GR = 11.86;                                     % Gear reduction
 Ix_motor = 0.000274;                            % kgm^2, motor mass moment of inertia
-Ix_wheel = (0.07829 + Ix_motor*GR*GR);          % kgm^2, wheel + motor mass moment of inertia, wheel mass = 4.6 kg
-b = 0.07;                                        % N.m.s/rad, motor damping factor
-gearboxEff = 1;                               % Gearbox efficiency
+Ix_wheel = (0.07829 + Ix_motor*GR*GR) * Ix_wheel_factor;          % kgm^2, wheel + motor mass moment of inertia, wheel mass = 4.6 kg
+b = 0.085;                                        % N.m.s/rad, motor damping factor
+gearboxEff = 0.95;                               % Gearbox efficiency
 motorOmegaLimit = 2094;                         % rad/s, motor mech. speed limit
 
 % motorOmegaLimit = 1186;
@@ -77,6 +78,7 @@ C = load('COMBINED OVERTURNING MOMENT COEFFS.mat').C;
 tireFactor_X_Accel = 0.6;
 tireFactor_X_Brake = 0.6;
 tireFactor_Y = 0.6;
+wheelSideBrakeFactor = 1;
 
 warning off
 steerParamData = readtable('HT08LeftHandCornerSteerTorqueParams.xlsx');
@@ -85,14 +87,19 @@ warning on
 driverSteerKin = steerParamData.Motion_Steering__deg_;
 wheelSteerKin = steerParamData.SteerAngle_Left__Front__deg_;
 
+rollingNoSlipTorqueThreshold = 3;
+
 % risingSlewRate = 1000;
 % fallingSlewRate = -1000;
 
 %%
-% load data0053.mat % Michelin AutoX 26s - 70s
+load data0053.mat % Michelin AutoX 26s - 70s
 % load data0058.mat % Michelin Endurance
-load data0028.mat % Michelin Skidpad 
+% load data0028.mat % Michelin Skidpad 
 % load data0234.mat % SCC Left Hand Continuous Corner 0 - 30s
+
+% load data0199.mat % MRDC half skidpad + tight slalom
+
 
 motorTorqueFLTime = data.MOTOR_CONTROLLER.mc_fl.feedback_torque(:,1);
 motorTorqueFRTime = data.MOTOR_CONTROLLER.mc_fr.feedback_torque(:,1);
@@ -103,6 +110,30 @@ motorTorqueFL = data.MOTOR_CONTROLLER.mc_fl.feedback_torque(:,2);
 motorTorqueFR = data.MOTOR_CONTROLLER.mc_fr.feedback_torque(:,2);
 motorTorqueRL = data.MOTOR_CONTROLLER.mc_rl.feedback_torque(:,2);
 motorTorqueRR = data.MOTOR_CONTROLLER.mc_rr.feedback_torque(:,2);
+
+% figure
+% hold on
+% plot(motorTorqueFLTime, motorTorqueFL)
+% plot(motorTorqueFRTime, motorTorqueFR)
+% plot(motorTorqueRLTime, motorTorqueRL)
+% plot(motorTorqueRRTime, motorTorqueRR)
+% legend('FL', 'FR', 'RL', 'RR')
+
+% Read David LapSim time and torque
+ 
+% load lapsimResultMichigan2022.mat;
+% 
+% motorTorqueFLTime = Result.t;
+% motorTorqueFRTime = Result.t;
+% motorTorqueRLTime = Result.t;
+% motorTorqueRRTime = Result.t;
+% 
+% motorTorqueFL = Result.T(:, 3);
+% motorTorqueFR = Result.T(:, 4);
+% motorTorqueRL = Result.T(:, 1);
+% motorTorqueRR = Result.T(:, 2);
+
+% DAVID LAPSIM PARAM GET END
 
 wheelSpeedDataFL = data.MOTOR_CONTROLLER.mc_fl.speed(:,2).*0.2.*0.1047198./11.86;
 wheelSpeedDataFR = data.MOTOR_CONTROLLER.mc_fr.speed(:,2).*0.2.*0.1047198./11.86;
@@ -152,10 +183,10 @@ motorTorqueRRInterp(isnan(motorTorqueRRInterp)) = 0;
 
 steeringDataInterp(isnan(steeringDataInterp)) = 0;
 
-motorTorqueFLInterp(abs(motorTorqueFLInterp) < 1) = 0;
-motorTorqueFRInterp(abs(motorTorqueFRInterp) < 1) = 0;
-motorTorqueRLInterp(abs(motorTorqueRLInterp) < 1) = 0;
-motorTorqueRRInterp(abs(motorTorqueRRInterp) < 1) = 0;
+motorTorqueFLInterp(abs(motorTorqueFLInterp) < 0.001) = 0;
+motorTorqueFRInterp(abs(motorTorqueFRInterp) < 0.001) = 0;
+motorTorqueRLInterp(abs(motorTorqueRLInterp) < 0.001) = 0;
+motorTorqueRRInterp(abs(motorTorqueRRInterp) < 0.001) = 0;
 
 
 motorTorqueFLInterp(abs(motorTorqueFLInterp) > 22) = 22;
@@ -173,15 +204,14 @@ wheelSpeedDataFRInterp = interp1(uniqueTimeFR, wheelSpeedDataFR(indFR), timelsim
 wheelSpeedDataRLInterp = interp1(uniqueTimeRL, wheelSpeedDataRL(indRL), timelsim)';
 wheelSpeedDataRRInterp = interp1(uniqueTimeRR, wheelSpeedDataRR(indRR), timelsim)';
 
-% [motorTorqueFRInterp, motorTorqueFLInterp] = alignsignals(motorTorqueFRInterp, motorTorqueFLInterp);
-% [motorTorqueRLInterp, motorTorqueFLInterp] = alignsignals(motorTorqueRLInterp, motorTorqueFLInterp);
-% [motorTorqueRRInterp, motorTorqueFLInterp] = alignsignals(motorTorqueRRInterp, motorTorqueFLInterp);
 motorTorqueFLInitInd = find((motorTorqueFLInterp > 0), 1, 'first');
 motorTorqueFRInitInd = find((motorTorqueFRInterp > 0), 1, 'first');
 motorTorqueRLInitInd = find((motorTorqueRLInterp > 0), 1, 'first');
 motorTorqueRRInitInd = find((motorTorqueRRInterp > 0), 1, 'first');
 
 latestInitInd = max([motorTorqueFLInitInd motorTorqueFRInitInd motorTorqueRLInitInd motorTorqueRRInitInd]);
+% earliestInitInd = 1;
+
 motorTorqueFLInterp(1:latestInitInd) = [];
 motorTorqueFRInterp(1:latestInitInd) = [];
 motorTorqueRLInterp(1:latestInitInd) = [];
@@ -225,7 +255,9 @@ plot(timelsim, motorTorqueFLInterp)
 plot(timelsim, motorTorqueFRInterp)
 plot(timelsim, motorTorqueRLInterp)
 plot(timelsim, motorTorqueRRInterp)
+legend('FL', 'FR', 'RL', 'RR')
 
+figure
 tiledlayout(2, 1)
 nexttile
 hold on

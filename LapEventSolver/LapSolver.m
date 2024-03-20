@@ -8,7 +8,7 @@ clc;
 %% LAP EVENT SOLVER
 
 veh = VehicleCharac(false);
-tr = TrackGen('Oval.xlsx', 25, true);
+tr = TrackGen('Straight 75m.xlsx', 10, true);
 
 v_initial = 0;
 
@@ -237,21 +237,31 @@ Fx_roll = -veh.c_roll .* Fz_total;
 yaw_rate = V .* tr.r; % rad/s
 delta = atan(yaw_rate .* veh.wb ./ V); % rad
 
-subplot(3, 2, [1 3 5])
+trackReference.AX = AX_target;
+trackReference.AY = AY;
+trackReference.posAlongTrack = tr.posAlongTrack;
+trackReference.yawRate = yaw_rate;
+trackReference.speed = V;
+trackReference.wheelSteerDeg = rad2deg(delta);
+trackReference.curvature = tr.r;
+trackReference.X = tr.X;
+trackReference.Y = tr.Y;
+
+subplot(4, 2, [1 3 5 7])
 hold on
 box on
 grid on
 surf(veh.GGV(:, :, 2), veh.GGV(:, :, 1), veh.GGV(:, :, 3))
 alpha(0.5)
-plot3(AY, AX_target, V, 'o', 'MarkerFaceColor', 'red', 'MarkerSize', 8)
+plot3(AY, AX_target, V, 'o', 'MarkerFaceColor', 'red', 'MarkerSize', 5)
+axis fill
 xlabel('Lat. Accel. [m/s^2]')
 ylabel('Long. Accel. [m/s^2]')
 zlabel('Speed [m/s]')
 title('GGV Diagram')
 legend('GGV Surface', 'Lap Accelerations')
-axis tight
 
-subplot(3, 2, 2)
+subplot(4, 2, 2)
 hold on
 plot(tr.X(1), tr.Y(1), 'r^', 'MarkerSize', 8)
 scatter(tr.X, tr.Y, 15, V)
@@ -260,12 +270,13 @@ cb = colorbar;
 cb.Label.String = 'Speed [m/s]';
 grid on
 axis equal
+axis padded
 xlabel('X [m]')
 ylabel('Y [m]')
 title('Track Map')
 legend('Starting Location')
 
-subplot(3, 2, 4)
+subplot(4, 2, 4)
 hold on
 box on
 grid on
@@ -279,7 +290,7 @@ title('Delta and Yaw Rate')
 legend('Wheel Steer', 'Yaw Rate')
 xlabel('Distance Along Track [m]')
 
-subplot(3, 2, 6)
+subplot(4, 2, 6)
 hold on
 box on
 grid on
@@ -294,7 +305,27 @@ xlabel('Speed [m/s]')
 legend('Power Limited Total Motor Tractive Force', 'Total Tire Tractive Force', 'Limited Tractive Force')
 title('Traction Model')
 
+subplot(4, 2, 8)
+hold on
+box on
+grid on
+yyaxis left
+ylabel('Acceleration [m/s^2]')
+plot(tr.posAlongTrack, AX_target)
+plot(tr.posAlongTrack, AY)
+yyaxis right
+ylabel('Vel. [m/s]')
+plot(tr.posAlongTrack, V)
+legend('Long. Accel.', 'Lat. Accel.', 'Velocity')
+xlabel('Distance Along Track [m]')
+title('Accel. and Vel.')
+
+
 sgtitle(sprintf('Laptime: %.2fs', laptime))
+
+
+
+
 %% Determine maximum velocities
 function v = calculateSpeedTrace(veh, r)
 
@@ -338,10 +369,10 @@ function v = calculateSpeedTrace(veh, r)
         c = sign(r) * (Mu_nominal * FZ_tot + dMudFz * FZ_nominal * FZ_tot - 0.25 * dMudFz * FZ_tot^2);
 
         v_solve = [sqrt((-b + sqrt(b^2 - 4*a*c)) / (2*a));
-            sqrt((-b - sqrt(b^2 - 4*a*c)) / (2*a))];
+                   sqrt((-b - sqrt(b^2 - 4*a*c)) / (2*a))];
 
         realLogical = [isreal(v_solve(1));
-            isreal(v_solve(2))];
+                       isreal(v_solve(2))];
 
         v_solve = min(v_solve(realLogical));
 
@@ -491,7 +522,7 @@ function [v_next, ax, ax_commanded, ay, overshoot] = vehicle_solve(veh, tr, v, v
         % Max lat. acceleration from tires
         ay_max = sign(ay) * veh.FYfunc(fz_tire) * 4 / veh.m;
 
-        if abs(ay / ay_max) > 1
+        if abs(ay / ay_max) >= 1
             % if ay/ay_max > 1, the friction ellipse would result in
             % complex number, should not happen
             ellipse_multi = 0;
@@ -503,6 +534,8 @@ function [v_next, ax, ax_commanded, ay, overshoot] = vehicle_solve(veh, tr, v, v
         % Pure longitudinal case
         ellipse_multi = 1;
     end
+
+
 
     %% Calculate accelerations
     if ax_needed >= 0

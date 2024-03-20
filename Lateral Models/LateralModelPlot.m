@@ -3,26 +3,26 @@
 [commonTime, iA, iB] = intersect(out.wheelLinearSpeed.Time(:, 1), timelsim);
 
 simWheelSpeedFL = out.wheelLinearSpeed.Data(:, 1);
-simWheelSpeedFL = simWheelSpeedFL(iA);
+simWheelSpeedFL = (simWheelSpeedFL(iA));
 
 simWheelSpeedFR = out.wheelLinearSpeed.Data(:, 2);
-simWheelSpeedFR = simWheelSpeedFR(iA);
+simWheelSpeedFR = (simWheelSpeedFR(iA));
 
 simWheelSpeedRL = out.wheelLinearSpeed.Data(:, 3);
-simWheelSpeedRL = simWheelSpeedRL(iA);
+simWheelSpeedRL = (simWheelSpeedRL(iA));
 
 simWheelSpeedRR = out.wheelLinearSpeed.Data(:, 4);
-simWheelSpeedRR = simWheelSpeedRR(iA);
+simWheelSpeedRR = (simWheelSpeedRR(iA));
 
-wheelSpeedDataFLInterp = wheelSpeedDataFLInterp(iB);
-wheelSpeedDataFRInterp = wheelSpeedDataFRInterp(iB);
-wheelSpeedDataRLInterp = wheelSpeedDataRLInterp(iB);
-wheelSpeedDataRRInterp = wheelSpeedDataRRInterp(iB);
+wheelSpeedDataFLInterpTrunc = wheelSpeedDataFLInterp(iB);
+wheelSpeedDataFRInterpTrunc = wheelSpeedDataFRInterp(iB);
+wheelSpeedDataRLInterpTrunc = wheelSpeedDataRLInterp(iB);
+wheelSpeedDataRRInterpTrunc = wheelSpeedDataRRInterp(iB);
 
-percentDiffFL = (simWheelSpeedFL - wheelSpeedDataFLInterp) ./ wheelSpeedDataFLInterp .* 100;
-percentDiffFR = (simWheelSpeedFR - wheelSpeedDataFRInterp) ./ wheelSpeedDataFRInterp .* 100;
-percentDiffRL = (simWheelSpeedRL - wheelSpeedDataRLInterp) ./ wheelSpeedDataRLInterp .* 100;
-percentDiffRR = (simWheelSpeedRR - wheelSpeedDataRRInterp) ./ wheelSpeedDataRRInterp .* 100;
+percentDiffFL = (simWheelSpeedFL - wheelSpeedDataFLInterpTrunc) ./ wheelSpeedDataFLInterpTrunc .* 100;
+percentDiffFR = (simWheelSpeedFR - wheelSpeedDataFRInterpTrunc) ./ wheelSpeedDataFRInterpTrunc .* 100;
+percentDiffRL = (simWheelSpeedRL - wheelSpeedDataRLInterpTrunc) ./ wheelSpeedDataRLInterpTrunc .* 100;
+percentDiffRR = (simWheelSpeedRR - wheelSpeedDataRRInterpTrunc) ./ wheelSpeedDataRRInterpTrunc .* 100;
 
 percentDiffFL(abs(percentDiffFL) > 40) = 40 * sign(percentDiffFL(abs(percentDiffFL) > 40));
 percentDiffFR(abs(percentDiffFR) > 40) = 40 * sign(percentDiffFR(abs(percentDiffFR) > 40));
@@ -44,7 +44,7 @@ ax1 = nexttile;
 hold on
 grid on 
 plot(timelsim, motorTorqueFLInterp)
-plot(commonTime, wheelSpeedDataFLInterp, '--') 
+plot(commonTime, wheelSpeedDataFLInterpTrunc, '--') 
 plot(commonTime, simWheelSpeedFL)
 legend('Input Torque', 'Test Data Speed', 'Sim Speed')
 title('FL')
@@ -53,7 +53,7 @@ ax2 = nexttile;
 hold on
 grid on 
 plot(timelsim, motorTorqueFRInterp)
-plot(commonTime, wheelSpeedDataFRInterp, '--') 
+plot(commonTime, wheelSpeedDataFRInterpTrunc, '--') 
 plot(commonTime, simWheelSpeedFR)
 legend('Input Torque', 'Test Data Speed', 'Sim Speed')
 title('FR')
@@ -84,7 +84,7 @@ ax5 = nexttile;
 hold on
 grid on 
 plot(timelsim, motorTorqueRLInterp)
-plot(commonTime, wheelSpeedDataRLInterp, '--') 
+plot(commonTime, wheelSpeedDataRLInterpTrunc, '--') 
 plot(commonTime, simWheelSpeedRL)
 legend('Input Torque', 'Test Data Speed', 'Sim Speed')
 title('RL')
@@ -93,7 +93,7 @@ ax6 = nexttile;
 hold on
 grid on 
 plot(timelsim, motorTorqueRRInterp)
-plot(commonTime, wheelSpeedDataRRInterp, '--') 
+plot(commonTime, wheelSpeedDataRRInterpTrunc, '--') 
 plot(commonTime, simWheelSpeedRR)
 legend('Input Torque', 'Test Data Speed', 'Sim Speed')
 title('RR')
@@ -122,10 +122,12 @@ title('RR % Diff')
 
 linkaxes([ax1 ax2 ax3 ax4 ax5 ax6 ax7 ax8], 'x')
 
-% figure
-% hold on
-% grid on
-% plot(out.bFrame.Speed)
+figure
+hold on
+grid on
+plot(out.bFrame.Speed)
+legend('Speed Expressed in B Frame')
+% plot(out.bFrame.Vx_B)
 
 % figure
 % hold on
@@ -147,13 +149,71 @@ legend('Yaw Rate [rad/s]', 'Vy_B [m/s]')
 % hold on
 % grid on
 % plot(out.bFrame.Yaw_Accel)
-%%
+%% INERTIAL MAP
 figure
 hold on
 axis equal
 grid on
-plot(out.positionVec.Y_POS_INERTIAL.Data, out.positionVec.X_POS_INERTIAL.Data)
-plot(out.positionVec.Y_POS_INERTIAL.Data(1), out.positionVec.X_POS_INERTIAL.Data(1), '^', 'LineWidth', 3)
+plot(out.iFrame.Y_POS_INERTIAL.Data, out.iFrame.X_POS_INERTIAL.Data)
+plot(out.iFrame.Y_POS_INERTIAL.Data(1), out.iFrame.X_POS_INERTIAL.Data(1), '^', 'LineWidth', 3)
 xlabel('Y (m)')
 ylabel('X (m)')
 legend('Inertial Position', 'Starting Point')
+
+%% INERTIAL COMPASS
+
+% Define unit vector length
+cgVelL = 1;
+bodyVelL = cgVelL;
+
+CGheadingAngleRad = atan2(out.iFrame.Y_VEL_INERTIAL.Data, out.iFrame.X_VEL_INERTIAL.Data);
+
+CGheadingAngleRad(isnan(CGheadingAngleRad)) = 0;
+
+cgVelHeadX = cos(CGheadingAngleRad) .* cgVelL;
+cgVelHeadY = sin(CGheadingAngleRad) .* cgVelL;
+
+bodyHeadingAngleRad = deg2rad(out.iFrame.YAW_ANGLE_DEG.Data);
+
+bodyHeadingX = cos(bodyHeadingAngleRad) .* bodyVelL;
+bodyHeadingY = sin(bodyHeadingAngleRad) .* bodyVelL;
+
+figure
+hold on
+box on
+grid on
+axis equal
+cgVelLine = line([0 cgVelHeadY(1)], [0 cgVelHeadX(1)],'color' ,'r');
+bodyHeadingLine = line([0 bodyHeadingY(1)], [0 bodyHeadingX(1)],'color' ,'g');
+
+an = annotation('textbox', [.2, .8, .1, .1], 'String', 't = ');
+
+xlim([-1 1])
+ylim([-1 1])
+
+for i = 1:5:length(cgVelHeadX)
+
+    
+    set(cgVelLine, 'YData', [0 cgVelHeadX(i)])
+    set(cgVelLine, 'XData', [0 cgVelHeadY(i)])
+
+    set(bodyHeadingLine, 'YData', [0 bodyHeadingX(i)])
+    set(bodyHeadingLine, 'XData', [0 bodyHeadingY(i)])
+
+    legend('CG Vel Dir', 'Body Heading Dir')
+
+    timeStr = sprintf('t = %.2f s', out.tout(i));
+    set(an, 'String', timeStr)
+
+    drawnow limitrate
+
+end
+%% IF USING LAPSIM DATA
+figure
+hold on
+grid on
+plot(Result.t,Result.v,'.-');
+plot(out.bFrame.Speed)
+xlabel('Time [s]')
+ylabel('Speed [m/s]')
+legend('David LapSim', 'Lateral Model')
