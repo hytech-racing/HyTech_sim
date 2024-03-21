@@ -3,7 +3,7 @@
 % clc;
 
 %% Parameters
-dt = 0.0005;                                     % s, change simulink solver step size too
+dt = 0.001;                                     % s, change simulink solver step size too
 
 m = 250;                                        % kg, total vehicle mass
 Iz_vehicle = 125;                               % kgm^2
@@ -20,9 +20,11 @@ lf = wb - lr;                                   % m, CG to front axle
 hCG = 0.2;                                      % m, CG height
 TLLTD = 0.5;                                    % Total lateral load transfer distribution, front
 
-track = 1.2;                                    % m, total track width
-tf = track / 2;                                 % m, front half track
-tr = track / 2;                                 % m, rear half track
+trackWidth = 1.2;                                    % m, total track width
+tf = trackWidth / 2;                                 % m, front half track
+tr = trackWidth / 2;                                 % m, rear half track
+
+steerLockDeg = 25;                              % deg, wheel steer lock angle
 
 Ix_wheel_factor = 1;
 GR = 11.86;                                     % Gear reduction
@@ -31,6 +33,7 @@ Ix_wheel = (0.07829 + Ix_motor*GR*GR) * Ix_wheel_factor;          % kgm^2, wheel
 b = 0.085;                                        % N.m.s/rad, motor damping factor
 gearboxEff = 0.95;                               % Gearbox efficiency
 motorOmegaLimit = 2094;                         % rad/s, motor mech. speed limit
+torqueLimit = 21.4;                             % Nm, per motor torque limit
 
 % motorOmegaLimit = 1186;
 
@@ -59,13 +62,6 @@ e_RR = atan(tr/lr);                             % rad, perpendicular vector to t
                                                 %      from CG to FL wheel center, angle between this
                                                 %      perpendicular vector with vehicle y-axis
 
-% wheelSS.A = -b/Ix_wheel;
-% wheelSS.B = [1/Ix_wheel -R_wheel/Ix_wheel];
-% wheelSS.C = 1;
-% wheelSS.D = [0 0];
-% 
-% omegaFL = 0;
-
 A = load('PSS LATERAL FORCE COEFFS.mat').A;
 B = load('PSS ALIGNING TORQUE COEFFS.mat').B;
 D = load('PLS LONGITUDINAL FORCE COEFFS.mat').D;
@@ -77,7 +73,7 @@ C = load('COMBINED OVERTURNING MOMENT COEFFS.mat').C;
 
 tireFactor_X_Accel = 0.6;
 tireFactor_X_Brake = 0.6;
-tireFactor_Y = 0.6;
+tireFactor_Y = 1;
 wheelSideBrakeFactor = 1;
 
 warning off
@@ -88,6 +84,10 @@ driverSteerKin = steerParamData.Motion_Steering__deg_;
 wheelSteerKin = steerParamData.SteerAngle_Left__Front__deg_;
 
 rollingNoSlipTorqueThreshold = 3;
+
+lowpassT = 0.05; % s
+
+lookAheadDistance = 0.1; % m
 
 % risingSlewRate = 1000;
 % fallingSlewRate = -1000;

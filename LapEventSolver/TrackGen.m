@@ -301,5 +301,6 @@ function [track] = TrackGen(filename, kappa, dispGraph)
     track.posAlongTrack = cumsum(dx);
     track.config = config_str;
     track.tangentialAngDeg = rad2deg(tangentialAngleRad);
+    track.length = L;
 
 end

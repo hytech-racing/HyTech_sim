@@ -186,6 +186,7 @@ grid on
 plot(out.tout, rad2deg(CGheadingAngleRad), 'r')
 plot(out.tout, rad2deg(bodyHeadingAngleRad), 'g')
 legend('CG Vel. Dir.', 'Body Heading Dir.')
+title('Heading Over Time')
 
 figure
 hold on
@@ -194,13 +195,14 @@ grid on
 axis equal
 cgVelLine = line([0 cgVelHeadY(1)], [0 cgVelHeadX(1)],'color' ,'r');
 bodyHeadingLine = line([0 bodyHeadingY(1)], [0 bodyHeadingX(1)],'color' ,'g');
+title('Inertial Compass')
 
 an = annotation('textbox', [.2, .8, .1, .1], 'String', 't = ');
 
 xlim([-.7 .7])
 ylim([-.7 .7])
 
-for i = 1:20:length(cgVelHeadX)
+for i = 1:5:length(cgVelHeadX)
 
     
     set(cgVelLine, 'YData', [0 cgVelHeadX(i)])

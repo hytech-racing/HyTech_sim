@@ -7,15 +7,17 @@ clc;
 
 %% LAP EVENT SOLVER
 
+clc;
+
 veh = VehicleCharac(false);
-tr = TrackGen('UTrack.xlsx', 1, true);
+track = TrackGen('Skidpad.xlsx', 1, true);
 
 v_initial = 0;
 
-v_max = zeros(tr.n, 1);
+v_max = zeros(track.n, 1);
 
 for i = 1:length(v_max)
-    v_max(i) = calculateSpeedTrace(veh, tr.r(i));
+    v_max(i) = calculateSpeedTrace(veh, track.r(i));
 end
 
 [v_apex, v_apex_loc] = findpeaks(-v_max);
@@ -47,13 +49,13 @@ N = length(apex_loc);
 
 % Allocate memory for flags checking for speed adjustments, 2 columns, one
 % for accel. one for decel
-flag = false(tr.n,2);
+flag = false(track.n,2);
 
 % [number of points in track mesh, number of apexes, 2 layers for accel and decel]
-v = inf*ones(tr.n,N,2);
-ax = zeros(tr.n,N,2);
-ax_commanded = zeros(tr.n,N,2);
-ay = zeros(tr.n,N,2);
+v = inf*ones(track.n,N,2);
+ax = zeros(track.n,N,2);
+ax_commanded = zeros(track.n,N,2);
+ay = zeros(track.n,N,2);
 
 % for each apex number
 for i = 1:N
@@ -89,13 +91,13 @@ for i = 1:N
             % column, at the current accel/decel layer = velocity at the
             % apex
             v(j, i, k) = v_apex(i);
-            ay(j, i, k) = v_apex(i)^2 * tr.r(j); % r has number of rows = track mesh size
+            ay(j, i, k) = v_apex(i)^2 * track.r(j); % r has number of rows = track mesh size
 
             % Set flag for speed adjustment to true
             flag(j, k) = true;
 
             % Get next point index
-            [~, j_next] = next_point(j, tr.n, mode, tr.config);
+            [~, j_next] = next_point(j, track.n, mode, track.config);
 
             % if ~(strcmp(tr.config,'Open') && mode == 1 && i == 1) % if not in standing start
             %     % assuming same speed right after apex
@@ -106,7 +108,7 @@ for i = 1:N
 
             while true
 
-                [v(j_next, i, k), ax(j, i, k), ax_commanded(j, i, k), ay(j, i, k), overshoot] = vehicle_solve(veh, tr, v(j,i,k), v_max(j_next), j, mode);
+                [v(j_next, i, k), ax(j, i, k), ax_commanded(j, i, k), ay(j, i, k), overshoot] = vehicle_solve(veh, track, v(j,i,k), v_max(j_next), j, mode);
 
                 if overshoot
                     break
@@ -141,7 +143,7 @@ for i = 1:N
                 flag(j, k) = true;
 
                 % Move j to the next location in the mesh
-                [j_next,j] = next_point(j, tr.n, mode, tr.config);
+                [j_next,j] = next_point(j, track.n, mode, track.config);
 
 
                 % For some reason it's acclerating past the end and
@@ -156,14 +158,14 @@ for i = 1:N
                 end
 
                 % Check if lap is finished
-                switch string(tr.config)
+                switch string(track.config)
                     case 'Closed'
                         if j == apex_loc(i)
                             % Made it to the same apex
                             break
                         end
                     case 'Open'
-                        if j == tr.n
+                        if j == track.n
                             % Made it to the end of the track mesh
                             break
                         end
@@ -182,12 +184,12 @@ for i = 1:N
 end
 
 % Post Process
-V = zeros(tr.n, 1);
-AX_target = zeros(tr.n, 1);
-AX_commanded = zeros(tr.n, 1);
-AY = zeros(tr.n, 1);
+V = zeros(track.n, 1);
+AX_target = zeros(track.n, 1);
+AX_commanded = zeros(track.n, 1);
+AY = zeros(track.n, 1);
 
-for i = 1:tr.n
+for i = 1:track.n
 
     % IDX also equals number of apexes
     IDX = length(v(i, :, 1));
@@ -217,7 +219,7 @@ for i = 1:tr.n
 
 end
 
-time = cumsum([tr.dx(2)./V(2);tr.dx(2:end)./V(2:end)]) ;
+time = cumsum([track.dx(2)./V(2);track.dx(2:end)./V(2:end)]) ;
 
 laptime = time(end);
 
@@ -234,18 +236,20 @@ Fx_aero = -0.5 .* veh.rho .* veh.Cd .* veh.frontalA .* V.^2;
 Fx_roll = -veh.c_roll .* Fz_total;
 
 % Calculate Yaw rate and steering
-yaw_rate = V .* tr.r; % rad/s
+yaw_rate = V .* track.r; % rad/s
 delta = atan(yaw_rate .* veh.wb ./ V); % rad
 
 trackReference.AX = AX_target;
 trackReference.AY = AY;
-trackReference.posAlongTrack = tr.posAlongTrack;
+trackReference.posAlongTrack = track.posAlongTrack;
 trackReference.yawRate = yaw_rate;
 trackReference.speed = V;
 trackReference.wheelSteerDeg = rad2deg(delta);
-trackReference.curvature = tr.r;
-trackReference.X = tr.X;
-trackReference.Y = tr.Y;
+trackReference.curvature = track.r;
+trackReference.X = track.X;
+trackReference.Y = track.Y;
+trackReference.tangentialAngDeg = track.tangentialAngDeg;
+trackReference.length = track.length;
 
 figure
 subplot(4, 2, [1 3 5 7])
@@ -264,8 +268,8 @@ legend('GGV Surface', 'Lap Accelerations')
 
 subplot(4, 2, 2)
 hold on
-plot(tr.Y(1), tr.X(1), 'r^', 'MarkerSize', 8)
-scatter(tr.Y, tr.X, 15, V)
+plot(track.Y(1), track.X(1), 'r^', 'MarkerSize', 8)
+scatter(track.Y, track.X, 15, V)
 alpha(1)
 cb = colorbar;
 cb.Label.String = 'Speed [m/s]';
@@ -283,10 +287,10 @@ box on
 grid on
 yyaxis left
 ylabel('Angle [Deg]')
-plot(tr.posAlongTrack, rad2deg(delta))
+plot(track.posAlongTrack, rad2deg(delta))
 yyaxis right
 ylabel('Ang. Vel [rad/s]')
-plot(tr.posAlongTrack, yaw_rate)
+plot(track.posAlongTrack, yaw_rate)
 title('Delta and Yaw Rate')
 legend('Wheel Steer', 'Yaw Rate')
 xlabel('Distance Along Track [m]')
@@ -312,11 +316,11 @@ box on
 grid on
 yyaxis left
 ylabel('Acceleration [m/s^2]')
-plot(tr.posAlongTrack, AX_target)
-plot(tr.posAlongTrack, AY)
+plot(track.posAlongTrack, AX_target)
+plot(track.posAlongTrack, AY)
 yyaxis right
 ylabel('Vel. [m/s]')
-plot(tr.posAlongTrack, V)
+plot(track.posAlongTrack, V)
 legend('Long. Accel.', 'Lat. Accel.', 'Velocity')
 xlabel('Distance Along Track [m]')
 title('Accel. and Vel.')
@@ -324,7 +328,7 @@ title('Accel. and Vel.')
 
 sgtitle(sprintf('Laptime: %.2fs', laptime))
 
-
+disp(' ')
 
 
 %% Determine maximum velocities
