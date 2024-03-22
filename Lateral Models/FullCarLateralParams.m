@@ -83,7 +83,7 @@ warning on
 driverSteerKin = steerParamData.Motion_Steering__deg_;
 wheelSteerKin = steerParamData.SteerAngle_Left__Front__deg_;
 
-rollingNoSlipTorqueThreshold = 3;
+rollingNoSlipTorqueThreshold = 1;
 
 lowpassT = 0.05; % s
 

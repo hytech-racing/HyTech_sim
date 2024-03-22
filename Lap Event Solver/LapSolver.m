@@ -10,7 +10,7 @@ clc;
 clc;
 
 veh = VehicleCharac(false);
-track = TrackGen('Skidpad.xlsx', 1, true);
+track = TrackGen('Oval Expanded.xlsx', 1, true);
 
 v_initial = 0;
 
