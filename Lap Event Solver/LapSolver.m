@@ -10,7 +10,7 @@ clc;
 clc;
 
 veh = VehicleCharac(false);
-track = TrackGen('Oval Expanded.xlsx', 1, true);
+track = TrackGen('Skidpad.xlsx', 1, true);
 
 v_initial = 0;
 
@@ -223,7 +223,7 @@ time = cumsum([track.dx(2)./V(2);track.dx(2:end)./V(2:end)]) ;
 
 laptime = time(end);
 
-fprintf('Laptime: %.2fs', laptime);
+fprintf('Estimated Laptime: %.2fs', laptime);
 
 % Calculate forces
 m = veh.m;
